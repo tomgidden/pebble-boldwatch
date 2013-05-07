@@ -50,10 +50,11 @@ Layer hmhands_layer;
 // design it's not meant to be thick.
 Layer sechand_layer;
 
-// Text layers and fonts for digital time and date. If these are not
-// enabled, they just don't get loaded or used, so no big deal.
+// Text layers and fonts for date display. If this is not enabled, they
+// just don't get loaded or used, so no big deal.
 TextLayer date_layer;
 GFont date_font;
+#define FONT_NUMBERS FONT_KEY_GOTHAM_30_BLACK
 
 // Store the time from the event, so we can use it in later
 // functions. Since we're not building a world-clock, or handling General
@@ -173,45 +174,71 @@ void handle_tick(AppContextRef ctx, PebbleTickEvent *t)
     else
         get_time(&pebble_time);
 
-
-    pebble_time.tm_min = pebble_time.tm_sec;
-
-
-    // Update the date string every hour, and also on initialisation.
+    // Update the date string whenever it changes, and on initialization
     if(display_date) {
 
+        // Store the current minute for the next tick
         static int min = -1;
 
-        if(1 || min != pebble_time.tm_min) {
+        // If the minute has changed since the last tick
+        if(min != pebble_time.tm_min) {
             min = pebble_time.tm_min;
 
+            // Work out the position of the hour hand, taking into account
+            // minute slew
             float h = pebble_time.tm_hour + ((float)min/60);
 
+            // Store the angle for the next update: we only bother moving
+            // the frame if it actually moved.
             static int ang = -1;
 
+            // We need to find the average of the two hands' positions and
+            // then find the furthest place from them.  There might be an
+            // easier way of doing this, but this works...
+
+            // Find the heading of each hand, 0-360
             int ang1 = (int)(h*360)/12;
             int ang2 = min * 6;
+
+            // First, check the difference between them...
             int _ang = ang1 - ang2;
 
-            if(_ang < 180 && _ang > -180)
+            // If the angle between them is reflex (ie. > 180 degrees) ,
+            // then we just use the average of the two angles. Otherwise,
+            // we use the opposite of the average.
+
+            if(_ang > -180 && _ang < 180)
+                // Use the opposite of the average:
                 _ang = (360 + 180 + (ang1+ang2) / 2) % 360;
             else
+                // Use the average:
                 _ang = (360 + (ang1+ang2) / 2) % 360;
 
-            if(1 || ang != _ang) {
+            // If the angle has changed:
+            if(ang != _ang) {
                 ang = _ang;
 
+                // Update the location of the date box.
                 GRect r = layer_get_frame(&date_layer.layer);
                 r.origin.x = date_center.x + (date_radius * sin_lookup(ang * TRIG_MAX_ANGLE / 360)) / TRIG_MAX_RATIO - date_width/2;
                 r.origin.y = date_center.y - (date_radius * cos_lookup(ang * TRIG_MAX_ANGLE / 360)) / TRIG_MAX_RATIO - date_height/2;
                 layer_set_frame(&date_layer.layer, r);
             }
 
+            // Store the day-of-the-month for the next tick
             static int mday = -1;
+
+            // If the day-of-the-month has changed, then reformat it.
             if(mday != pebble_time.tm_mday) {
                 mday = pebble_time.tm_mday;
 
+                // We could use a simple integer to string conversion, but
+                // I don't know if that's available in PebbleOS, and can't
+                // be bothered to look it up. Screw it: it only happens
+                // once a day, and on init.
                 string_format_time(date_text, sizeof(date_text), "%e", &pebble_time);
+
+                // We only want a single digit.
                 if(mday < 10)
                     text_layer_set_text(&date_layer, date_text+1);
                 else
