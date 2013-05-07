@@ -12,12 +12,14 @@
 #define YES 1
 
 PBL_APP_INFO(MY_UUID, APP_NAME, "Tom Gidden",
-             1, 0, /* App version */
+             1, 1, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON, APP_INFO_WATCH_FACE);
 
 // Boolean preferences:
 const int display_seconds = BOLDWATCH_SECONDS;
 const int display_date = BOLDWATCH_DATE;
+
+const int display_invert = NO; /* NO, NO, NO, NO. It looks stupid. */
 
 Window window;
 
@@ -67,6 +69,9 @@ GPoint date_center;
 const int date_radius = 40;
 const int date_width = 42;
 const int date_height = 42;
+
+// Inverter layer, if black-on-white has been requested
+InverterLayer inverter_layer;
 
 ////////////////////////////////////////////////////////////////////////////
 // This comes direct from
@@ -186,7 +191,7 @@ void handle_tick(AppContextRef ctx, PebbleTickEvent *t)
 
             // Work out the position of the hour hand, taking into account
             // minute slew
-            float h = pebble_time.tm_hour + ((float)min/60);
+            float h = (pebble_time.tm_hour % 12) + ((float)min/60);
 
             // Store the angle for the next update: we only bother moving
             // the frame if it actually moved.
@@ -361,6 +366,12 @@ void handle_init(AppContextRef ctx)
 
     // Add it to the window.
     layer_add_child(&window.layer, &centerdot_container.layer.layer);
+
+    // Add an inverter if black-on-white is desired (WHY?!)
+    if(display_invert) {
+        inverter_layer_init(&inverter_layer, window.layer.frame);
+        layer_add_child(&window.layer, &inverter_layer.layer);
+    }
 
     // Finally, do the rest of the initialisation by calling the tick
     // event handler directly (for this first run):
