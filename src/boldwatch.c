@@ -18,8 +18,7 @@ PBL_APP_INFO(MY_UUID, APP_NAME, "Tom Gidden",
 // Boolean preferences:
 const int display_seconds = BOLDWATCH_SECONDS;
 const int display_date = BOLDWATCH_DATE;
-
-const int display_invert = NO; /* NO, NO, NO, NO. It looks stupid. */
+const int display_invert = BOLDWATCH_INVERT; /* Even though it looks stupid */
 
 Window window;
 
