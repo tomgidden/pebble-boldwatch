@@ -12,13 +12,25 @@
 #define YES 1
 
 PBL_APP_INFO(MY_UUID, APP_NAME, "Tom Gidden",
-             1, 1, /* App version */
+             1, 2, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON, APP_INFO_WATCH_FACE);
 
 // Boolean preferences:
-const int display_seconds = BOLDWATCH_SECONDS;
-const int display_date = BOLDWATCH_DATE;
-const int display_invert = BOLDWATCH_INVERT; /* Even though it looks stupid */
+const int enable_seconds = BOLDWATCH_SECONDS;
+const int enable_date = BOLDWATCH_DATE;
+const int enable_invert = BOLDWATCH_INVERT; /* Even though it looks stupid */
+
+const int enable_alarms = BOLDWATCH_ALARMS;
+
+const VibePattern alarm_pattern = {
+    .durations = (uint32_t []){200, 300, 200, 300, 200, 300, 200, 300, 200},
+    .num_segments = 9
+};
+const uint8_t alarm_hours[] = {
+    0,0,0,0,0,0,0,0, // midnight - 7am
+    1,0,0,0,0,0,1,0, // 8am - 3pm
+    0,0,0,0,1,0,0,0  // 4pm - 11pm
+};
 
 Window window;
 
@@ -179,7 +191,7 @@ void handle_tick(AppContextRef ctx, PebbleTickEvent *t)
         get_time(&pebble_time);
 
     // Update the date string whenever it changes, and on initialization
-    if(display_date) {
+    if(enable_date) {
 
         // Store the current minute for the next tick
         static int min = -1;
@@ -253,7 +265,7 @@ void handle_tick(AppContextRef ctx, PebbleTickEvent *t)
 
     // If we're displaying a second-hand, then mark the second-hand layer
     // as dirty for redrawing.
-    if(display_seconds) {
+    if(enable_seconds) {
         layer_mark_dirty(&sechand_layer);
     }
 
@@ -266,8 +278,13 @@ void handle_tick(AppContextRef ctx, PebbleTickEvent *t)
     //
     //   c) Display of seconds is not enabled, which implies this event
     //      handler is running every minute anyway.
-    if (!display_seconds || (pebble_time.tm_sec == 0)) {
+    if (!enable_seconds || (pebble_time.tm_sec == 0)) {
         layer_mark_dirty(&hmhands_layer);
+
+        // If on the hour and alarms are enabled, do an alarm.
+        if (enable_alarms && alarm_hours[pebble_time.tm_hour] && pebble_time.tm_min == 0 && pebble_time.tm_sec == 0) {
+            vibes_enqueue_custom_pattern(alarm_pattern);
+        }
     }
 }
 
@@ -299,7 +316,7 @@ void handle_init(AppContextRef ctx)
     layer_add_child(&window.layer, &watchface_container.layer.layer);
 
     // Date display
-    if(display_date) {
+    if(enable_date) {
         date_center = GPoint(watchface_frame.origin.x + watchface_center.x,
                              watchface_frame.origin.y + watchface_center.y);
 
@@ -348,7 +365,7 @@ void handle_init(AppContextRef ctx)
     layer_add_child(&window.layer, &hmhands_layer);
 
     // Second-hand, if there is one:
-    if(display_seconds) {
+    if(enable_seconds) {
         layer_init(&sechand_layer, watchface_frame);
         sechand_layer.update_proc = &sechand_update_proc;
         layer_add_child(&window.layer, &sechand_layer);
@@ -367,7 +384,7 @@ void handle_init(AppContextRef ctx)
     layer_add_child(&window.layer, &centerdot_container.layer.layer);
 
     // Add an inverter if black-on-white is desired (WHY?!)
-    if(display_invert) {
+    if(enable_invert) {
         inverter_layer_init(&inverter_layer, window.layer.frame);
         layer_add_child(&window.layer, &inverter_layer.layer);
     }
@@ -404,7 +421,7 @@ void pbl_main(void *params)
 
     // If there's no second-hand, we can update every minute instead and
     // save some power.
-    if(!display_seconds)
+    if(!enable_seconds)
         handlers.tick_info.tick_units = MINUTE_UNIT;
 
     app_event_loop(params, &handlers);
