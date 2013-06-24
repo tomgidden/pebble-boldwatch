@@ -1,4 +1,4 @@
-all: build/boldwatch_noseconds.pbw build/boldwatch_noseconds_nodate.pbw build/boldwatch_nodate.pbw build/boldwatch.pbw build/boldwatch_invert_noseconds.pbw build/boldwatch_invert_noseconds_nodate.pbw build/boldwatch_invert_nodate.pbw build/boldwatch_invert.pbw build/boldwatch_noseconds_alarms.pbw
+all: build/boldwatch_noseconds.pbw build/boldwatch_noseconds_nodate.pbw build/boldwatch_nodate.pbw build/boldwatch.pbw build/boldwatch_invert_noseconds.pbw build/boldwatch_invert_noseconds_nodate.pbw build/boldwatch_invert_nodate.pbw build/boldwatch_invert.pbw build/boldwatch_noseconds_alarms.pbw build/boldwatch.pbw
 
 clean:
 	./waf clean

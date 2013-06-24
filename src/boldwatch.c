@@ -12,7 +12,7 @@
 #define YES 1
 
 PBL_APP_INFO(MY_UUID, APP_NAME, "Tom Gidden",
-             1, 2, /* App version */
+             1, 3, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON, APP_INFO_WATCH_FACE);
 
 // Boolean preferences:
@@ -28,8 +28,8 @@ const VibePattern alarm_pattern = {
 };
 const uint8_t alarm_hours[] = {
     0,0,0,0,0,0,0,0, // midnight - 7am
-    1,0,0,0,0,0,1,0, // 8am - 3pm
-    0,0,0,0,1,0,0,0  // 4pm - 11pm
+    1,0,0,0,0,0,0,0, // 8am - 3pm
+    0,1,0,0,0,0,1,0  // 4pm - 11pm
 };
 
 Window window;
@@ -141,7 +141,13 @@ void rot_bitmap_set_src_ic(RotBitmapLayer *image, GPoint ic) {
 
 void set_hand(RotBmpContainer *container, int ang)
 {
-    container->layer.rotation = TRIG_MAX_ANGLE * ang / 360;
+    if(ang == 0)
+        // As of Pebble OS 1.11, rotation=0 seems to disappear the image,
+        // but after checking, path drawing is still broken, so let's hack
+        // it.
+        container->layer.rotation = TRIG_MAX_ANGLE;
+    else
+        container->layer.rotation = TRIG_MAX_ANGLE * ang / 360;
 }
 
 void hmhands_update_proc(Layer *me, GContext *ctx)
@@ -357,6 +363,7 @@ void handle_init(AppContextRef ctx)
     // Same as with minute hands...
     rotbmp_init_container(RESOURCE_ID_IMAGE_MINUTEHAND, &minutehand_container);
     layer_add_child(&hmhands_layer, &minutehand_container.layer.layer);
+
     rot_bitmap_set_src_ic(&minutehand_container.layer, GPoint(2, 54));
     minutehand_container.layer.layer.frame.origin.x = watchface_center.x - minutehand_container.layer.layer.frame.size.w/2;
     minutehand_container.layer.layer.frame.origin.y = watchface_center.y - minutehand_container.layer.layer.frame.size.h/2;
