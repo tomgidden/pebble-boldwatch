@@ -1,0 +1,38 @@
+{
+    "uuid": "9A8C2123-7D20-4324-A185-45692A580EC6",
+    "shortName": "Boldwatch",
+    "longName": "Boldwatch",
+    "companyName": "Tom Gidden",
+    "versionCode": 2.01,
+    "versionLabel": "2.0.1",
+    "watchapp": {
+        "watchface": true
+    },
+    "capabilities": [ "configurable" ],
+    "appKeys": {
+        "sechand":1,
+        "showdate":3,
+        "invert":5,
+        "leds":6
+    },
+    "resources": {
+        "media": [
+            {
+                "name": "IMAGE_MENU_ICON",
+                "type": "png",
+                "file": "images/menuicon.png",
+                "menu_icon": true
+            },
+            {
+                "name": "IMAGE_WATCHFACE",
+                "type": "png",
+                "file": "images/watch_face.png"
+            },
+            {
+                "name": "IMAGE_CENTERDOT",
+                "type": "png",
+                "file": "images/centerdot.png"
+            }
+        ]
+    }
+}
