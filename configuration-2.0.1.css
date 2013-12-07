@@ -1,0 +1,119 @@
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Montserrat-Bold'), url(http://themes.googleusercontent.com/static/fonts/montserrat/v3/IQHow_FEYlDC4Gzy_m8fcvEr6Hm6RMS0v1dtXsGir4g.ttf) format('truetype');
+}
+
+body {
+  background:black;
+  color:white;
+  font:16px Montserrat, Helvetica, Arial, sans-serif;
+  font-weight:700;
+  line-height:20px;
+  -webkit-font-smoothing:none;
+  min-height:100%;
+  margin:0;
+}
+
+h1, footer {
+  text-align:center;
+  margin:0;
+  padding:0;
+}
+
+footer {
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+}
+footer:before {
+  content:"v.2.0.1, by Tom Gidden";
+}
+
+h1 {
+  font:32px;
+  padding:0;
+  line-height:40px;
+}
+
+footer {
+  font:16px;
+  line-height:20px;
+}
+
+input[type=checkbox],
+input[type=submit] {
+  display:none;
+  clear:both;
+}
+
+* {
+  -webkit-box-sizing:border-box;
+  box-sizing:border-box;
+}
+
+label {
+  display:block;
+  text-align:left;
+  width:100%;
+  padding:0 20px;
+  margin:0;
+}
+
+p {
+  padding:0;
+  margin:-20px 0 0 20px;
+  font-size:12px;
+}
+
+input + label {
+  margin:20px 0 10px 0;
+  line-height:40px;
+  height:40px;
+}
+
+input[type=submit] {
+}
+
+input[type=submit] + label:after {
+  content:'\a0SAVE\a0';
+  float:right;
+  background:white;
+  color:black;
+}
+
+input[type=checkbox] + label:after {
+  outline:1px solid white;
+  float:right;
+  background:black;
+  color:white;
+}
+
+input[type=checkbox]:checked + label:after {
+  background:white;
+  color:black;
+}
+
+input.showhide + label:after {
+  content:'\a0Hide\a0';
+}
+
+input.showhide[type=checkbox]:checked + label:after {
+  content:'\a0Show\a0';
+}
+
+input.invert + label:after {
+  outline:1px solid white;
+  background:black;
+  color:white;
+  content:'\a0 Black\a0';
+}
+
+input.invert[type=checkbox]:checked + label:after {
+  outline:1px solid white;
+  background:white;
+  color:black;
+  content:'\a0 White\a0';
+}
