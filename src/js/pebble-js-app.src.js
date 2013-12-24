@@ -19,7 +19,7 @@ Pebble.addEventListener('showConfiguration', function () {
     // HTML file with the JSON for the current config data, and then
     // encode the entire HTML with URL encoding, and open it as a URL.
     // This way, the HTML can be bundled with the app.
-    Pebble.openURL('data:text/html,'+encodeURI('_HTMLMARKER_'.replace('_CONFDATA_', JSON.stringify(config), 'g')));
+    Pebble.openURL('data:text/html,'+encodeURI('_HTMLMARKER_<!--.html'.replace('_CONFDATA_', JSON.stringify(config), 'g')));
 });
 
 Pebble.addEventListener('webviewclosed', function (e) {

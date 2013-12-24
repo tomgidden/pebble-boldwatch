@@ -13,6 +13,6 @@ clean:
 build/boldwatch-2.pbw: src/js/pebble-js-app.js src/boldwatch.c appinfo.json
 	pebble build
 
-src/js/pebble-js-app.js: src/js/pebble-js-app.src.js src/js/configuration.html
+src/js/pebble-js-app.js: src/js/pebble-js-app.src.js resources/configuration.html
 	perl -pe 'BEGIN { local $$/; open $$fh,pop @ARGV or die $$!; $$f = <$$fh>; $$f =~ s/\047/\\\047/g; } s/_HTMLMARKER_/$$f/g;' $^ | /usr/local/share/npm/bin/uglifyjs -c -m > $@
 
