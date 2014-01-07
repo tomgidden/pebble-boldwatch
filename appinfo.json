@@ -3,8 +3,8 @@
     "shortName": "Boldwatch",
     "longName": "Boldwatch",
     "companyName": "Tom Gidden",
-    "versionCode": 202,
-    "versionLabel": "2.0.2",
+    "versionCode": 204,
+    "versionLabel": "2.0.4",
     "watchapp": {
         "watchface": true
     },
@@ -13,7 +13,8 @@
         "sechand":1,
         "showdate":3,
         "invert":5,
-        "leds":6
+        "leds":6,
+        "face":7
     },
     "resources": {
         "media": [
@@ -24,14 +25,39 @@
                 "menu_icon": true
             },
             {
-                "name": "IMAGE_WATCHFACE",
-                "type": "png",
-                "file": "images/watch_face.png"
-            },
-            {
                 "name": "IMAGE_CENTERDOT",
                 "type": "png",
                 "file": "images/centerdot.png"
+            },
+            {
+                "name": "IMAGE_WATCHFACE_0",
+                "type": "png",
+                "file": "images/watch_face_0.png"
+            },
+            {
+                "name": "IMAGE_WATCHFACE_1",
+                "type": "png",
+                "file": "images/watch_face_1.png"
+            },
+            {
+                "name": "IMAGE_WATCHFACE_2",
+                "type": "png",
+                "file": "images/watch_face_2.png"
+            },
+            {
+                "name": "IMAGE_WATCHFACE_3",
+                "type": "png",
+                "file": "images/watch_face_3.png"
+            },
+            {
+                "name": "IMAGE_WATCHFACE_4",
+                "type": "png",
+                "file": "images/watch_face_4.png"
+            },
+            {
+                "name": "IMAGE_WATCHFACE_5",
+                "type": "png",
+                "file": "images/watch_face_5.png"
             }
         ]
     }

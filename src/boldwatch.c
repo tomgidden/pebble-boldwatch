@@ -18,13 +18,15 @@ enum Settings {
     SETTING_SECHAND = 1,
     SETTING_SHOWDATE = 3,
     SETTING_INVERT = 5,
-    SETTING_LEDS = 6
+    SETTING_LEDS = 6,
+    SETTING_FACE = 7
 };
 
 uint8_t sechand = NO;
 uint8_t showdate = YES;
 uint8_t invert = NO;
-uint8_t leds = NO;
+uint8_t leds = YES;
+uint8_t face = 0;
 
 uint8_t update_on_next_tick = YES;
 uint8_t update_leds_on_next_tick = YES;
@@ -60,6 +62,16 @@ static BitmapLayer *watchface_layer;
 // the frame.
 static GPoint watchface_center;
 static GRect watchface_frame;
+
+const int MAX_FACE = 5;
+const int face_ids[] = {
+    RESOURCE_ID_IMAGE_WATCHFACE_0,
+    RESOURCE_ID_IMAGE_WATCHFACE_1,
+    RESOURCE_ID_IMAGE_WATCHFACE_2,
+    RESOURCE_ID_IMAGE_WATCHFACE_3,
+    RESOURCE_ID_IMAGE_WATCHFACE_4,
+    RESOURCE_ID_IMAGE_WATCHFACE_5
+};
 
 // centerdot is to cover up the where the hands cross the center, which is
 // unsightly. Previous versions used a rounded rectangle or a circle, but
@@ -407,7 +419,7 @@ static void setup_ui()
     };
 
     // Load the watchface first
-    load_image_to_bitmap_layer(&watchface_image, &watchface_layer, &watchface_frame, RESOURCE_ID_IMAGE_WATCHFACE);
+    load_image_to_bitmap_layer(&watchface_image, &watchface_layer, &watchface_frame, face_ids[face]);
 
     // The center of the watchface (relative to the origin of the frame)
     // is used in laying out the hands.
@@ -646,6 +658,7 @@ static void tuple_changed_callback(const uint32_t key, const Tuple* tuple_new, c
 // Configuration data from PebbleJS has been received.
 {
     uint8_t value = tuple_new->value->uint8;
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "tuple_changed_callback: %ld %d", key, value);
 
     switch (key) {
     case SETTING_SECHAND:
@@ -670,6 +683,11 @@ static void tuple_changed_callback(const uint32_t key, const Tuple* tuple_new, c
         bluetooth_state = BLUETOOTH_UNKNOWN;
         update_on_next_tick = YES;
         update_leds_on_next_tick = YES;
+        break;
+
+    case SETTING_FACE:
+        face = value<=MAX_FACE ? value : 0;
+        update_on_next_tick = YES;
         break;
     }
 
@@ -742,6 +760,7 @@ static void send_cfg_to_js(void)
   dict_write_uint8(iter, SETTING_SHOWDATE, showdate);
   dict_write_uint8(iter, SETTING_INVERT, invert);
   dict_write_uint8(iter, SETTING_LEDS, leds);
+  dict_write_uint8(iter, SETTING_FACE, face);
 
   dict_write_end(iter);
 
@@ -764,6 +783,9 @@ static void init(void)
     if(persist_exists(SETTING_LEDS))
         leds = persist_read_int(SETTING_LEDS);
 
+    if(persist_exists(SETTING_FACE))
+        face = persist_read_int(SETTING_FACE);
+
     // Create and initialise the main window
     window = window_create();
     window_set_background_color(window, GColorBlack);
@@ -783,7 +805,8 @@ static void init(void)
         TupletInteger(SETTING_SECHAND, sechand),
         TupletInteger(SETTING_SHOWDATE, showdate),
         TupletInteger(SETTING_INVERT, invert),
-        TupletInteger(SETTING_LEDS, leds)
+        TupletInteger(SETTING_LEDS, leds),
+        TupletInteger(SETTING_FACE, face)
     };
 
     app_sync_init(&app,

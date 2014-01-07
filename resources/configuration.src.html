@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+label,input,select { display:block }
+label { height:50px }
+input,select { float:right }
+
+body {
+  font-family:"Helvetica Neue", Helvetica, sans-serif;
+}
+
+label {
+  clear:none;
+  padding-top:0.5em;
+}
+
+
+h1, footer {
+  text-align:center;
+  margin:0;
+  padding:0;
+}
+
+footer {
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+  font-size:16px;
+  line-height:20px;
+  border-top:1px solid lightgray;
+}
+
+h1 {
+  font-size:24px;
+  padding:0;
+  line-height:2em;
+}
+
+input, select {
+  font-size:18px;
+  min-width:32px;
+  height:32px;
+}
+
+p {
+  padding:0;
+  margin:-1.5em 48px 1.5em 1.5em;
+  font-size:small;
+}
+
+</style>
+<script>
+
+function s(e) {
+    var o = {};
+    var i, j;
+    for(i=0; i<e.length; i++) {
+       j = e[i].id;
+       if(j) {
+           if(e[i].checked !== undefined)
+               o[j] = e[i].checked?1:0;
+           else
+               o[j] = parseInt(e[i].value);
+       }
+    }
+
+    window.location.href = "pebblejs://close#"+JSON.stringify(o);
+
+    return false;
+}
+
+</script>
+</head>
+<body>
+<header>
+<h1>
+<span>Boldwatch</span> for Pebble
+</h1>
+</header>
+<form onsubmit="return s(this)">
+<input type="checkbox" id="showdate" class="showhide">
+<label for="showdate">Display Date:</label>
+
+<input type="checkbox" id="leds" class="showhide">
+<label for="leds">Bluetooth &amp; Battery icons:</label>
+
+<input type="checkbox" id="invert" class="invert">
+<label for="invert">Black-on-white:</label>
+
+<input type="checkbox" id="sechand" class="showhide">
+<label for="sechand">Display seconds:</label>
+<p>(reduces battery life)</p>
+
+<select id="face" class="face">
+<option value="0">Roman</option>
+<option value="1">Quarters</option>
+<option value="2">Digits</option>
+<option value="3">Marks</option>
+<option value="4">Dots</option>
+<option value="5">Blank</option>
+</select>
+<label for="face">Face style:</label>
+
+<input type="submit" id="save">
+<label for="save">Save settings:</label>
+</form>
+<footer>
+</footer>
+<script>
+var d=_CONFDATA_;
+for(var i in d) if(d.hasOwnProperty(i)) {
+    var o = document.getElementById(i);
+    if(o.checked !== undefined)
+        o.checked = !!d[i];
+    else if(o.value !== undefined)
+        o.value = d[i];
+}
+</script>
+</body>
+</html>

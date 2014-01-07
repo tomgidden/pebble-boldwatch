@@ -29,7 +29,6 @@ Pebble.addEventListener('webviewclosed', function (e) {
         // There's a response: assume it's the correct settings from the
         // HTML form, store it in localStorage (necessary?) and push to
         // the Pebble.
-        console.log(e.response);
         config = JSON.parse(e.response);
         window.localStorage.setItem('bold', e.response);
         Pebble.sendAppMessage(config);
