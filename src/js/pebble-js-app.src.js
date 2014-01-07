@@ -8,6 +8,9 @@ Pebble.addEventListener('ready', function () {
     // and if it's there, parse it so we can use it.
     if (typeof json === 'string') {
         config = JSON.parse(json);
+
+        // Send it to Pebble
+        Pebble.sendAppMessage(config);
     }
 });
 
@@ -30,7 +33,11 @@ Pebble.addEventListener('webviewclosed', function (e) {
         // HTML form, store it in localStorage (necessary?) and push to
         // the Pebble.
         config = JSON.parse(e.response);
+
+        // Store it locally
         window.localStorage.setItem('bold', e.response);
+
+        // And send it to Pebble
         Pebble.sendAppMessage(config);
     }
 });

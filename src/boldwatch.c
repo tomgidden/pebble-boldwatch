@@ -13,8 +13,8 @@
 #define NO 0
 #define YES 1
 
-// Boolean preferences:
-enum Settings {
+// Boolean preference keys (should match up with appinfo.json)
+enum SettingsKeys {
     SETTING_SECHAND = 1,
     SETTING_SHOWDATE = 3,
     SETTING_INVERT = 5,
@@ -22,14 +22,28 @@ enum Settings {
     SETTING_FACE = 7
 };
 
-uint8_t sechand = NO;
-uint8_t showdate = YES;
-uint8_t invert = NO;
-uint8_t leds = YES;
-uint8_t face = 0;
+#define SETTING_STRUCT_KEY 235
 
-uint8_t update_on_next_tick = YES;
-uint8_t update_leds_on_next_tick = YES;
+typedef struct Settings {
+    bool sechand;
+    bool showdate;
+    bool invert;
+    bool leds;
+    uint8_t face;
+} __attribute__((__packed__)) Settings;
+
+// The actual global settings structure
+Settings settings = {
+    .sechand = NO,
+    .showdate = YES,
+    .invert = NO,
+    .leds = YES,
+    .face = 0
+};
+
+
+bool update_on_next_tick = YES;
+bool update_leds_on_next_tick = YES;
 
 #define BLUETOOTH_CONNECTED 1
 #define BLUETOOTH_DISCONNECTED 0
@@ -43,8 +57,8 @@ uint8_t bluetooth_state = BLUETOOTH_UNKNOWN;
 uint8_t battery_state = BATTERY_UNKNOWN;
 
 // Syncing of configuration settings with PebbleJS
-static AppSync app;
-static uint8_t buffer[256];
+static AppSync sync;
+static uint8_t sync_buffer[255];
 
 
 // The main window itself
@@ -63,14 +77,15 @@ static BitmapLayer *watchface_layer;
 static GPoint watchface_center;
 static GRect watchface_frame;
 
-const int MAX_FACE = 5;
+const int MAX_FACE = 6;
 const int face_ids[] = {
     RESOURCE_ID_IMAGE_WATCHFACE_0,
     RESOURCE_ID_IMAGE_WATCHFACE_1,
     RESOURCE_ID_IMAGE_WATCHFACE_2,
     RESOURCE_ID_IMAGE_WATCHFACE_3,
     RESOURCE_ID_IMAGE_WATCHFACE_4,
-    RESOURCE_ID_IMAGE_WATCHFACE_5
+    RESOURCE_ID_IMAGE_WATCHFACE_5,
+    RESOURCE_ID_IMAGE_WATCHFACE_6
 };
 
 // centerdot is to cover up the where the hands cross the center, which is
@@ -149,11 +164,8 @@ static const GPathInfo CHARGE_ICON = {
     }
 };
 
-
-
 // Inverter layer, if black-on-white has been requested
 InverterLayer *invert_layer;
-
 
 // Store the time from the event, so we can use it in later
 // functions. Since we're not building a world-clock, or handling General
@@ -257,6 +269,8 @@ static inline void battery_changed_translate(BatteryChargeState charge_state)
         battery_state = BATTERY_CHARGING;
     else if(charge_state.is_plugged)
         battery_state = BATTERY_CHARGED;
+    else if(charge_state.charge_percent == 90)
+        battery_state = 100;
     else
         battery_state = charge_state.charge_percent;
 }
@@ -266,7 +280,7 @@ static void leds_update_proc(Layer *layer, GContext *ctx)
 {
     update_leds_on_next_tick = NO;
 
-    if(!leds) return;
+    if(!settings.leds) return;
 
     graphics_context_set_stroke_color(ctx, GColorWhite);
 
@@ -419,7 +433,7 @@ static void setup_ui()
     };
 
     // Load the watchface first
-    load_image_to_bitmap_layer(&watchface_image, &watchface_layer, &watchface_frame, face_ids[face]);
+    load_image_to_bitmap_layer(&watchface_image, &watchface_layer, &watchface_frame, face_ids[settings.face]);
 
     // The center of the watchface (relative to the origin of the frame)
     // is used in laying out the hands.
@@ -429,7 +443,7 @@ static void setup_ui()
     layer_add_child(window_layer, bitmap_layer_get_layer(watchface_layer));
 
     // Add the LEDs layer
-    if(leds) {
+    if(settings.leds) {
         bluetooth_path = gpath_create(&BLUETOOTH_ICON);
         charge_path = gpath_create(&CHARGE_ICON);
         gpath_move_to(charge_path, charge_origin);
@@ -460,7 +474,7 @@ static void setup_ui()
     layer_add_child(window_layer, hmhands_layer);
 
     // Second-hand, if there is one:
-    if(sechand) {
+    if(settings.sechand) {
         sechand_layer = layer_create(watchface_frame);
         layer_set_update_proc(sechand_layer, sechand_update_proc);
         layer_add_child(window_layer, sechand_layer);
@@ -478,7 +492,7 @@ static void setup_ui()
     layer_add_child(window_layer, bitmap_layer_get_layer(centerdot_layer));
 
     // Date display
-    if(showdate) {
+    if(settings.showdate) {
         date_center = GPoint(watchface_frame.origin.x + watchface_center.x,
                              watchface_frame.origin.y + watchface_center.y);
 
@@ -494,7 +508,7 @@ static void setup_ui()
     }
 
     // Add an inverter if black-on-white is desired (WHY?!)
-    if(invert) {
+    if(settings.invert) {
         invert_layer = inverter_layer_create(layer_get_frame(window_layer));
         layer_add_child(window_layer, inverter_layer_get_layer(invert_layer));
     }
@@ -521,7 +535,7 @@ static void tick(struct tm *t, TimeUnits units_changed)
 
     // If we're displaying the date, update the date string
     // every hour, and also on initialisation.
-    if(showdate) {
+    if(settings.showdate) {
 
         // Store the current minute for the next tick
         static int min = -1;
@@ -529,7 +543,7 @@ static void tick(struct tm *t, TimeUnits units_changed)
         // If the minute has changed since the last tick or showdate has
         // been changed. We indicate this by showdate being 2 rather than
         // YES / 1.  It'll get reset to 1 at the end.
-        if(min != pebble_time->tm_min || showdate==2) {
+        if(min != pebble_time->tm_min || settings.showdate==2) {
             min = pebble_time->tm_min;
 
             // Work out the position of the hour hand, taking into account
@@ -563,7 +577,7 @@ static void tick(struct tm *t, TimeUnits units_changed)
                 _ang = (360 + (ang1+ang2) / 2) % 360;
 
             // If the angle has changed (or showdate is dirty):
-            if(ang != _ang || showdate==2) {
+            if(ang != _ang || settings.showdate==2) {
                 ang = _ang;
 
                 if(date_layer) {
@@ -580,7 +594,7 @@ static void tick(struct tm *t, TimeUnits units_changed)
             // Store the day-of-the-month for the next tick
             static int mday = -1;
 
-            if(date_layer && (mday != pebble_time->tm_mday || showdate==2)) {
+            if(date_layer && (mday != pebble_time->tm_mday || settings.showdate==2)) {
                 mday = pebble_time->tm_mday;
 
                 // We could use a simple integer to string conversion, but
@@ -597,14 +611,14 @@ static void tick(struct tm *t, TimeUnits units_changed)
             }
 
             // Reset the dirty thing
-            if(showdate==2)
-                showdate = YES;
+            if(settings.showdate==2)
+                settings.showdate = YES;
         }
     }
 
     // If we're displaying a second-hand, then mark the second-hand layer
     // as dirty for redrawing.
-    if(sechand) {
+    if(settings.sechand) {
         if(sechand_layer) layer_mark_dirty(sechand_layer);
     }
 
@@ -617,7 +631,7 @@ static void tick(struct tm *t, TimeUnits units_changed)
     //
     //   c) Display of seconds is not enabled, which implies this event
     //      handler is running every minute anyway.
-    if (update_on_next_tick || !sechand || (pebble_time->tm_sec == 0)) {
+    if (update_on_next_tick || !settings.sechand || (pebble_time->tm_sec == 0)) {
         if(hmhands_layer) layer_mark_dirty(hmhands_layer);
     }
 
@@ -636,10 +650,10 @@ static void battery_changed_callback(BatteryChargeState charge_state)
 
     APP_LOG(APP_LOG_LEVEL_DEBUG, "battery_changed_callback: %d", battery_state);
 
-    if(!leds) return;
+    if(!settings.leds) return;
 
     update_leds_on_next_tick = YES;
-    tick(NULL, sechand ? SECOND_UNIT : MINUTE_UNIT);
+    tick(NULL, settings.sechand ? SECOND_UNIT : MINUTE_UNIT);
 }
 
 static void bluetooth_changed_callback(bool connected)
@@ -648,67 +662,83 @@ static void bluetooth_changed_callback(bool connected)
 
     APP_LOG(APP_LOG_LEVEL_DEBUG, "bluetooth_changed_callback: %d", bluetooth_state);
 
-    if(!leds) return;
+    if(!settings.leds) return;
 
     update_leds_on_next_tick = YES;
-    tick(NULL, sechand ? SECOND_UNIT : MINUTE_UNIT);
+    tick(NULL, settings.sechand ? SECOND_UNIT : MINUTE_UNIT);
 }
 
-static void tuple_changed_callback(const uint32_t key, const Tuple* tuple_new, const Tuple* tuple_old, void* context)
-// Configuration data from PebbleJS has been received.
+static void sync_tuple_changed_callback(const uint32_t key, const Tuple* tuple_new, const Tuple* tuple_old, void* context)
+// Configuration data from PebbleJS (or from the init routine?) has been received.
 {
     uint8_t value = tuple_new->value->uint8;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "tuple_changed_callback: %ld %d", key, value);
+    uint8_t _value; // Key-specific transformed version of value
+    bool _update = NO; // Temp value for update_on_next_tick
 
     switch (key) {
     case SETTING_SECHAND:
-        sechand = value ? YES : NO;
-        update_on_next_tick = YES;
+        _value = value ? YES : NO;
+        if(_value != settings.sechand) {
+            _update = YES;
+            settings.sechand = _value;
+        }
         break;
 
     case SETTING_SHOWDATE:
-        showdate = value ? YES : NO;
-        if(showdate) showdate=2; // Dirty the date so it gets refreshed on next tick
-        update_on_next_tick = YES;
+        // 2 indicates to dirty the date so it gets refreshed on next tick
+        _value = value ? YES : NO;
+        if(!!_value != !!settings.showdate) {
+            _update = YES;
+            settings.showdate = _value ? 2 : NO;
+        }
         break;
 
     case SETTING_INVERT:
-        invert = value ? YES : NO;
-        update_on_next_tick = YES;
+        _value = value ? YES : NO;
+        if(_value != settings.invert) {
+            _update = YES;
+            settings.invert = _value;
+        }
         break;
 
     case SETTING_LEDS:
-        leds = value ? YES : NO;
-        battery_state = BATTERY_UNKNOWN;
-        bluetooth_state = BLUETOOTH_UNKNOWN;
-        update_on_next_tick = YES;
-        update_leds_on_next_tick = YES;
+        _value = value ? YES : NO;
+        if(_value != settings.leds) {
+            _update = YES;
+            update_leds_on_next_tick = YES;
+            settings.leds = _value;
+            battery_state = BATTERY_UNKNOWN;
+            bluetooth_state = BLUETOOTH_UNKNOWN;
+        }
         break;
 
     case SETTING_FACE:
-        face = value<=MAX_FACE ? value : 0;
-        update_on_next_tick = YES;
+        _value = value<=MAX_FACE ? value : 0;
+        if(_value != settings.face) {
+            settings.face = _value;
+            _update = YES;
+        }
         break;
     }
+
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "tuple_changed_callback: %ld %d %d", key, value, _update);
 
     // If the settings were updated, then we need to schedule the next
     // tick.  Since it might change from every-minute to every-second (or
     // vice versa), we need to do a full resubscribe.
-    if(update_on_next_tick) {
-
-        // Write the value to persistent storage
-        persist_write_int(key, value);
+    if(_update && !update_on_next_tick) {
+        update_on_next_tick = _update;
 
         // (Re-)schedule the timer
         tick_timer_service_unsubscribe();
-        tick_timer_service_subscribe(sechand ? SECOND_UNIT : MINUTE_UNIT, tick);
+        tick_timer_service_subscribe(settings.sechand ? SECOND_UNIT : MINUTE_UNIT, tick);
     }
 }
 
-static void app_error_callback(DictionaryResult dict_error, AppMessageResult app_message_error, void* context)
+static void sync_error_callback(DictionaryResult dict_error, AppMessageResult app_message_error, void* context)
 // Error from... um... the thing.
 {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "app error %d", app_message_error);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "dict error %d, app error %d", dict_error, app_message_error);
 }
 
 static void window_load(Window *_window)
@@ -727,11 +757,11 @@ static void window_load(Window *_window)
     update_on_next_tick = YES;
 
     // Schedule the timer
-    tick_timer_service_subscribe(sechand ? SECOND_UNIT : MINUTE_UNIT, tick);
+    tick_timer_service_subscribe(settings.sechand ? SECOND_UNIT : MINUTE_UNIT, tick);
 
     // Call the tick handler once to initialise the face.  This should
     // schedule the timer.
-    tick(NULL, sechand ? SECOND_UNIT : MINUTE_UNIT);
+    tick(NULL, settings.sechand ? SECOND_UNIT : MINUTE_UNIT);
 }
 
 static void window_unload(Window *window)
@@ -748,44 +778,29 @@ static void window_unload(Window *window)
     clear_ui();
 }
 
-static void send_cfg_to_js(void)
-// Send settings to PebbleJS so it can store them
+static void load_cfg()
+// Load configuration from on-watch persistent storage
 {
-  DictionaryIterator *iter;
-  app_message_outbox_begin(&iter);
+    if(persist_exists(SETTING_STRUCT_KEY)) {
+        // There's local persistent storage data, so use it.
+        persist_read_data(SETTING_STRUCT_KEY, &settings, sizeof(settings));
+    }
+    else {
+        // Configuration doesn't exist in persistent storage, so should
+        // really get it from the PebbleJS localStorage. However, AppSync
+        // should do that for us anyway.
+    }
+}
 
-  if (iter == NULL) return;
-
-  dict_write_uint8(iter, SETTING_SECHAND, sechand);
-  dict_write_uint8(iter, SETTING_SHOWDATE, showdate);
-  dict_write_uint8(iter, SETTING_INVERT, invert);
-  dict_write_uint8(iter, SETTING_LEDS, leds);
-  dict_write_uint8(iter, SETTING_FACE, face);
-
-  dict_write_end(iter);
-
-  app_message_outbox_send();
+static void save_cfg()
+// Save configuration to on-watch persistent storage
+{
+    persist_write_data(SETTING_STRUCT_KEY, &settings, sizeof(settings));
 }
 
 static void init(void)
 // Initialise the app
 {
-    // Initialise settings from persistent storage
-    if(persist_exists(SETTING_SECHAND))
-        sechand = persist_read_int(SETTING_SECHAND);
-
-    if(persist_exists(SETTING_SHOWDATE))
-        showdate = persist_read_int(SETTING_SHOWDATE);
-
-    if(persist_exists(SETTING_INVERT))
-        invert = persist_read_int(SETTING_INVERT);
-
-    if(persist_exists(SETTING_LEDS))
-        leds = persist_read_int(SETTING_LEDS);
-
-    if(persist_exists(SETTING_FACE))
-        face = persist_read_int(SETTING_FACE);
-
     // Create and initialise the main window
     window = window_create();
     window_set_background_color(window, GColorBlack);
@@ -799,25 +814,27 @@ static void init(void)
         return;
     }
 
-    app_message_open(160, 160);
 
-    Tuplet tuples[] = {
-        TupletInteger(SETTING_SECHAND, sechand),
-        TupletInteger(SETTING_SHOWDATE, showdate),
-        TupletInteger(SETTING_INVERT, invert),
-        TupletInteger(SETTING_LEDS, leds),
-        TupletInteger(SETTING_FACE, face)
+    // This whole AppSync thing confuses me.
+    app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
+
+    // Load configuration from on-watch persistent storage
+    load_cfg();
+
+    Tuplet initial_values[] = {
+        TupletInteger(SETTING_SECHAND, settings.sechand),
+        TupletInteger(SETTING_SHOWDATE, settings.showdate),
+        TupletInteger(SETTING_INVERT, settings.invert),
+        TupletInteger(SETTING_LEDS, settings.leds),
+        TupletInteger(SETTING_FACE, settings.face)
     };
 
-    app_sync_init(&app,
-                  buffer, sizeof(buffer),
-                  tuples, ARRAY_LENGTH(tuples),
-                  tuple_changed_callback,
-                  app_error_callback,
+    app_sync_init(&sync,
+                  sync_buffer, sizeof(sync_buffer),
+                  initial_values, ARRAY_LENGTH(initial_values),
+                  sync_tuple_changed_callback,
+                  sync_error_callback,
                   NULL);
-
-    // And send the persistent config to PebbleJS
-    send_cfg_to_js();
 
     // Load the window onto the UI stack
     window_stack_push(window, true);
@@ -825,8 +842,21 @@ static void init(void)
 
 static void deinit()
 {
+    // Save config to on-watch persistent storage, just in case
+    save_cfg();
+
+    // Update the sync'ed settings.  Is this what's meant to be done?
+    Tuplet new_values[] = {
+        TupletInteger(SETTING_SECHAND, settings.sechand),
+        TupletInteger(SETTING_SHOWDATE, settings.showdate),
+        TupletInteger(SETTING_INVERT, settings.invert),
+        TupletInteger(SETTING_LEDS, settings.leds),
+        TupletInteger(SETTING_FACE, settings.face)
+    };
+    app_sync_set(&sync, new_values, ARRAY_LENGTH(new_values));
+
     // Shut down PebbleJS
-    app_sync_deinit(&app);
+    app_sync_deinit(&sync);
 
     // And close the main window
     window_destroy(window);
